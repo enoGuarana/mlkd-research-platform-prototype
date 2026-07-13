@@ -1,38 +1,26 @@
 import Link from "next/link";
 
-const missionHighlights = [
-  {
-    title: "Research areas",
-    description: "Medical AI, NLP, vision, responsible AI and computational biology.",
-  },
-  {
-    title: "Publication intelligence",
-    description: "Searchable records with AI-readable summaries for public and partner audiences.",
-  },
-  {
-    title: "Operational flow",
-    description: "A shared content and admin layer for easier maintenance and publication updates.",
-  },
-];
-
 export default function HomePage() {
   return (
     <div>
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">Machine Learning and Knowledge Discovery</p>
-          <h1>Find MLKD research, people, publications and opportunities faster.</h1>
+          <h1>Machine Learning and Knowledge Discovery</h1>
           <p>
-            A modular Next.js research platform prototype designed for searchable
-            publications, AI-assisted summaries, dynamic profiles and maintenance-ready content.
+            The MLKD group advances machine learning and its applications in medical imaging,
+            natural language processing and sequential decision making.
           </p>
 
           <div className="hero-actions">
+            <Link className="button primary" href="/team">
+              Our team
+            </Link>
             <Link className="button primary" href="/publications">
               Explore publications
             </Link>
-            <Link className="button secondary" href="/admin">
-              See maintenance flow
+            <Link className="button secondary" href="/projects">
+              View projects
             </Link>
           </div>
         </div>
@@ -46,11 +34,11 @@ export default function HomePage() {
             </div>
             <div>
               <strong>5</strong>
-              <span>research areas</span>
+              <span>core areas</span>
             </div>
             <div>
               <strong>1</strong>
-              <span>editable content hub</span>
+              <span>admin workflow</span>
             </div>
           </div>
         </div>
@@ -62,28 +50,10 @@ export default function HomePage() {
           <h2 id="mission-title">Advance machine learning and its applications.</h2>
         </div>
         <p>
-          MLKD spans medical imaging, natural language processing, reinforcement learning,
-          learning theory, computer vision and computational biology. This modular Next.js
-          version turns those research lines into a clean, navigable experience for visitors,
-          collaborators and maintainers.
+          Areas of interest include learning theory, deep learning, convolutional neural
+          networks, computer vision, reinforcement learning, supervised and self-supervised
+          learning, attention mechanisms and computational biology.
         </p>
-      </section>
-
-      <section className="section" aria-labelledby="modules-title">
-        <div className="section-heading">
-          <p className="eyebrow">Modular architecture</p>
-          <h2 id="modules-title">Organized in React pages and shared content blocks</h2>
-        </div>
-
-        <div className="topic-grid">
-          {missionHighlights.map((item) => (
-            <article className="topic-card active" key={item.title}>
-              <span>0{missionHighlights.indexOf(item) + 1}</span>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
-          ))}
-        </div>
       </section>
     </div>
   );

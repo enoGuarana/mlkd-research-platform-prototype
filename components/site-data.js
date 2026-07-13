@@ -124,6 +124,40 @@ export const people = [
   },
 ];
 
+export const currentMembers = [
+  { initials: "AO", name: "Arlindo Oliveira", role: "Group Leader" },
+  { initials: "RB", name: "R. Barbulescu", role: "PostDoc Researcher" },
+  { initials: "DC", name: "David Calhas", role: "PostDoc Researcher" },
+  { initials: "JS", name: "Joao Silva", role: "Invited Researcher" },
+  { initials: "AB", name: "Alexandre Borges", role: "Invited Researcher" },
+  { initials: "MF", name: "Miguel Freire", role: "Invited Researcher" },
+  { initials: "BV", name: "Beatriz Vieira", role: "PhD Student" },
+  { initials: "AD", name: "Andre Duarte", role: "PhD Student" },
+  { initials: "JM", name: "Joao Marques", role: "PhD Student" },
+  { initials: "ID", name: "Ines Duarte", role: "PhD Student" },
+  { initials: "DB", name: "Duarte Boto", role: "PhD Student" },
+  { initials: "HD", name: "Helder Dias", role: "PhD Student" },
+  { initials: "FG", name: "Francisco Guedes", role: "PhD Student" },
+  { initials: "VC", name: "Vitoria Cruz", role: "PhD Student" },
+  { initials: "DD", name: "Dominika Dlugosz", role: "PhD Student" },
+  { initials: "LP", name: "Lucas Piper", role: "Researcher" },
+];
+
+export const pastMembers = [
+  "Mariana Serrao",
+  "Miguel Vicente",
+  "Goncalo Oliveira",
+  "Jose Carreira",
+  "Tomas Nunes",
+  "Pedro Henriques",
+  "Francisco Honorio",
+  "Jose Cunha",
+  "Miguel Ferreira",
+  "Martim Afonso",
+  "Ana Alves",
+  "Miguel Amaral",
+];
+
 export const researchAreas = [
   {
     title: "Medical AI",
@@ -147,6 +181,105 @@ export const researchAreas = [
   },
 ];
 
+export const projects = [
+  {
+    title: "PRELUNA",
+    status: "Active project",
+    lead: "Arlindo Manuel Limede de Oliveira",
+    period: "2022 to 2024",
+    funder: "FCT",
+  },
+  {
+    title: "OLISSIPO",
+    status: "Active project",
+    lead: "Susana de Almeida Mendes Vinga Martins",
+    period: "2021 to 2023",
+    funder: "Horizon 2020",
+  },
+  {
+    title: "NEURONREDUCE",
+    status: "Active project",
+    lead: "Luis Miguel Teixeira D Avila Pinto da Silveira",
+    period: "2018 to 2022",
+    funder: "FCT",
+  },
+  {
+    title: "PRECISE",
+    status: "Past project",
+    lead: "Alexandre Paulo Lourenco Francisco",
+    period: "2016 to 2019",
+    funder: "FCT",
+  },
+  {
+    title: "EXCELERATE",
+    status: "Past project",
+    lead: "Mario Jorge Costa Gaspar da Silva",
+    period: "2015 to 2019",
+    funder: "EU",
+  },
+  {
+    title: "BioData",
+    status: "Past project",
+    lead: "Arlindo Manuel Limede de Oliveira",
+    period: "2017 to 2021",
+    funder: "P2020",
+  },
+];
+
+export const dissertationGroups = [
+  {
+    label: "New Dissertations",
+    description: "Dissertations open for application.",
+  },
+  {
+    label: "Ongoing Dissertations",
+    description: "Dissertations currently being developed by the group.",
+  },
+  {
+    label: "Finished Dissertations",
+    description: "Completed MSc work produced by the group.",
+  },
+];
+
+export const events = [
+  {
+    type: "Reading Group Meeting",
+    date: "Sep 9, 2025",
+    title: "Deep Feedback Models",
+    presenter: "David Calhas",
+  },
+  {
+    type: "Reading Group Meeting",
+    date: "Jul 1, 2025",
+    title: "Brain Mapping with Dense Features Grounding Cortical Semantic Selectivity in Natural Images With Vision Transformers",
+    presenter: "Francisco Guedes",
+  },
+  {
+    type: "Reading Group Meeting",
+    date: "Jun 24, 2025",
+    title: "Visual-RFT: Visual Reinforcement Fine-Tuning",
+    presenter: "Joao Silva",
+  },
+  {
+    type: "Reading Group Meeting",
+    date: "May 27, 2025",
+    title: "A Conformal Risk Control Framework for Granular Word Assessment and Uncertainty Calibration",
+    presenter: "Goncalo Gomes",
+  },
+  {
+    type: "Reading Group Meeting",
+    date: "Feb 4, 2025",
+    title: "DIS-CO: Discovering Copyrighted Content in VLMs Training Data",
+    presenter: "Andre Duarte",
+  },
+  {
+    type: "Cluster Usage Guide",
+    date: "Mar 28, 2023",
+    title: "Cluster Usage Guide",
+    presenter: "Joao Silva and Manuel Goulao",
+  },
+];
+
 export const opportunities = [
   {
     label: "Thesis topic",
@@ -162,5 +295,23 @@ export const opportunities = [
     label: "Collaboration",
     title: "Industry-facing research briefs",
     description: "Transform technical papers into short summaries for partners and grants.",
+  },
+];
+
+export const openPositions = [
+  {
+    label: "MSc dissertations",
+    title: "Dissertation topics",
+    description: "Explore open dissertation themes connected to MLKD research areas.",
+  },
+  {
+    label: "PhD opportunities",
+    title: "Doctoral research",
+    description: "Contact the group to discuss doctoral work in machine learning and its applications.",
+  },
+  {
+    label: "Collaborations",
+    title: "Research collaborations",
+    description: "Industry and academic partners can connect around applied AI, NLP, vision and medical AI.",
   },
 ];

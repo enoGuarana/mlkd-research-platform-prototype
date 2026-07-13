@@ -1,6 +1,11 @@
 import PublicationsPanel from "../../components/PublicationsPanel";
+import { getPublications } from "../../lib/publications";
 
-export default function PublicationsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function PublicationsPage() {
+  const publications = await getPublications();
+
   return (
     <section className="section">
       <div className="section-heading">
@@ -12,7 +17,7 @@ export default function PublicationsPage() {
         </p>
       </div>
 
-      <PublicationsPanel />
+      <PublicationsPanel publications={publications} />
     </section>
   );
 }

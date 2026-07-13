@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { publications } from "./site-data";
 
-export default function PublicationsPanel() {
+export default function PublicationsPanel({ publications }) {
   const [search, setSearch] = useState("");
   const [topic, setTopic] = useState("all");
   const [year, setYear] = useState("all");
-  const [selectedTitle, setSelectedTitle] = useState(publications[0].title);
+  const [selectedTitle, setSelectedTitle] = useState(publications[0]?.title ?? "");
+  const years = Array.from(new Set(publications.map((publication) => publication.year))).sort((a, b) =>
+    b.localeCompare(a)
+  );
+  const topics = Array.from(
+    new Map(publications.map((publication) => [publication.topic, publication.topicLabel])).entries()
+  );
 
   const filtered = publications.filter((publication) => {
     const query = search.trim().toLowerCase();
@@ -73,10 +78,11 @@ export default function PublicationsPanel() {
           <span>Topic</span>
           <select id="topic-filter" value={topic} onChange={(event) => setTopic(event.target.value)}>
             <option value="all">All topics</option>
-            <option value="medical">Medical AI</option>
-            <option value="nlp">NLP and retrieval</option>
-            <option value="vision">Vision and multimodal</option>
-            <option value="responsible">Responsible AI</option>
+            {topics.map(([topicValue, label]) => (
+              <option key={topicValue} value={topicValue}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -84,9 +90,11 @@ export default function PublicationsPanel() {
           <span>Year</span>
           <select id="year-filter" value={year} onChange={(event) => setYear(event.target.value)}>
             <option value="all">All years</option>
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
+            {years.map((yearValue) => (
+              <option key={yearValue} value={yearValue}>
+                {yearValue}
+              </option>
+            ))}
           </select>
         </label>
       </div>

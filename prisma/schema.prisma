@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Publication {
+  id              String   @id @default(cuid())
+  doi             String   @unique
+  openalexId      String   @unique
+  title           String
+  authorsJson     String   @default("[]")
+  topicsJson      String   @default("[]")
+  institutionsJson String  @default("[]")
+  keywordsJson    String   @default("[]")
+  publicationYear Int?
+  publicationDate String?
+  type            String?
+  venue           String?
+  abstract        String?
+  topic           String?
+  topicLabel      String?
+  publicSummary   String?
+  industryAngle   String?
+  socialSnippet   String?
+  reviewStatus    String   @default("imported")
+  isVisible       Boolean  @default(true)
+  citedByCount    Int      @default(0)
+  isOpenAccess    Boolean  @default(false)
+  landingPageUrl  String?
+  pdfUrl          String?
+  rawOpenAlexJson String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastIngestedAt  DateTime @default(now())
+}
+
+model Member {
+  id         String   @id @default(cuid())
+  name       String
+  role       String
+  status     String   @default("current")
+  category   String?
+  initials   String?
+  photoUrl   String?
+  profileUrl String?
+  email      String?
+  sortOrder  Int      @default(0)
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  status      String   @default("active")
+  lead        String?
+  period      String?
+  funder      String?
+  externalUrl String?
+  description String?
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Dissertation {
+  id          String   @id @default(cuid())
+  title       String
+  status      String   @default("new")
+  student     String?
+  supervisor  String?
+  year        Int?
+  description String?
+  url         String?
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  type        String   @default("Reading Group Meeting")
+  date        String?
+  presenter   String?
+  paperTitle  String?
+  paperUrl    String?
+  description String?
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OpenPosition {
+  id           String   @id @default(cuid())
+  title        String
+  type         String   @default("research")
+  description  String?
+  contactEmail String?
+  deadline     String?
+  status       String   @default("open")
+  sortOrder    Int      @default(0)
+  isVisible    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model IngestionRun {
+  id          String           @id @default(cuid())
+  source      String           @default("openalex")
+  total       Int              @default(0)
+  succeeded   Int              @default(0)
+  failed      Int              @default(0)
+  createdAt   DateTime         @default(now())
+  completedAt DateTime?
+  errors      IngestionError[]
+}
+
+model IngestionError {
+  id        String       @id @default(cuid())
+  runId     String
+  doi       String
+  message   String
+  createdAt DateTime     @default(now())
+  run       IngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+}

@@ -2,11 +2,14 @@ import "./globals.css";
 import Link from "next/link";
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/research", label: "Research" },
+  { href: "/", label: "About" },
+  { href: "/team", label: "Team" },
+  { href: "/projects", label: "Projects" },
   { href: "/publications", label: "Publications" },
-  { href: "/people", label: "People" },
-  { href: "/opportunities", label: "Opportunities" },
+  { href: "/dissertations", label: "Dissertations" },
+  { href: "/events", label: "Events" },
+  { href: "https://lumlis.tecnico.ulisboa.pt/", label: "Reading Group", external: true },
+  { href: "/open-positions", label: "Open positions" },
   { href: "/admin", label: "Admin" },
 ];
 
@@ -28,7 +31,12 @@ export default function RootLayout({ children }) {
 
           <nav className="main-nav" aria-label="Primary navigation">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href}>
+              <Link
+                key={item.href}
+                href={item.href}
+                target={item.external ? "_blank" : undefined}
+                rel={item.external ? "noreferrer" : undefined}
+              >
                 {item.label}
               </Link>
             ))}
