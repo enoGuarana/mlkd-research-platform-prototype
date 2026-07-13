@@ -1,35 +1,66 @@
 # MLKD Research Platform Prototype
 
-This is a static prototype for an AI-enhanced web platform for the Machine
-Learning and Knowledge Discovery group at INESC-ID.
+This repository contains a modularized Next.js prototype for an AI-enhanced
+research platform used by the Machine Learning and Knowledge Discovery group at
+INESC-ID.
 
 ## What is included
 
-- Redesigned homepage with MLKD identity and research positioning.
-- Research area map.
-- Searchable publication portal with topic and year filters.
+- Modular homepage and landing page experience.
+- Dedicated Research page with the research area map.
+- Searchable Publications page with topic and year filters.
 - AI-assisted summary panel for public summaries, industry angles and social snippets.
-- Dynamic member profile preview.
-- MSc and PhD opportunities section.
-- Visibility and analytics section.
-- Admin console concept focused on easier maintenance.
+- Dynamic People page with grouped profile data.
+- Opportunities page for MSc and PhD entry points.
+- Admin page concept focused on maintenance and publishing workflows.
 
-## How to open
+## Project structure
 
-Open `index.html` directly in a browser, or serve this folder locally:
-
-```powershell
-python -m http.server 8765 --bind 127.0.0.1
-```
-
-Then visit:
+The project is organized in a simple App Router layout using Next.js:
 
 ```txt
-http://127.0.0.1:8765/
+app/
+  layout.js
+  page.js
+  research/page.js
+  publications/page.js
+  people/page.js
+  opportunities/page.js
+  admin/page.js
+components/
+  site-data.js
+  PublicationsPanel.js
+public/
+  logo512.png
+  home2-500w.png
 ```
 
-## Notes
+## How to run locally
 
-The prototype uses representative data from the current MLKD website and the
-internship brief. It is intentionally static, so it can later be migrated to
-Next.js, PostgreSQL, Prisma and an LLM-backed summarization service.
+1. Install dependencies:
+
+```powershell
+npm install
+ou npm.cmd install
+```
+
+2. Start the development server:
+
+```powershell
+npm run dev
+ou npm.cmd run dev
+```
+
+3. Open the app in your browser:
+
+```txt
+http://127.0.0.1:3000/
+```
+
+## Production build
+
+To validate the Next.js build:
+
+```powershell
+npm run build
+```

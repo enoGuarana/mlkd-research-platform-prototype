@@ -1,6 +1,11 @@
 .DS_Store
 Thumbs.db
 node_modules/
+.next/
+out/
 dist/
+.vercel/
+.npm
+*.log
 .env
 .env.*
