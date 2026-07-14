@@ -1,0 +1,21 @@
+# type(scope): short imperative summary
+#
+# Examples:
+# feat(admin): add manual publication editing
+# fix(auth): reject expired admin sessions
+# docs: document target architecture
+#
+# Types:
+# feat, fix, docs, refactor, chore, test, style, perf
+#
+# Scopes:
+# admin, publications, team, auth, prisma, docs, ui, ingestion, architecture
+#
+# Why:
+# - 
+#
+# What changed:
+# - 
+#
+# Validation:
+# - 

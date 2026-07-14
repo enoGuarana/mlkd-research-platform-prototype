@@ -9,7 +9,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
-    "ingest:publications": "node scripts/ingest-openalex.js"
+    "ingest:publications": "node scripts/ingest-openalex.js",
+    "commit:auto": "node scripts/commit-auto.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

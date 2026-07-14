@@ -9,8 +9,8 @@ datasource db {
 
 model Publication {
   id              String   @id @default(cuid())
-  doi             String   @unique
-  openalexId      String   @unique
+  doi             String?  @unique
+  openalexId      String?  @unique
   title           String
   authorsJson     String   @default("[]")
   topicsJson      String   @default("[]")
@@ -32,7 +32,7 @@ model Publication {
   isOpenAccess    Boolean  @default(false)
   landingPageUrl  String?
   pdfUrl          String?
-  rawOpenAlexJson String
+  rawOpenAlexJson String   @default("{}")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   lastIngestedAt  DateTime @default(now())

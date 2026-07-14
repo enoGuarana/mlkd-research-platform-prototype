@@ -54,6 +54,10 @@ export default async function AdminPage() {
           <span>Projects</span>
           <strong>Update active and past projects</strong>
         </Link>
+        <Link className="admin-shortcut" href="/admin/publications">
+          <span>Publications</span>
+          <strong>Add, edit and review publication records</strong>
+        </Link>
         <Link className="admin-shortcut" href="/admin/events">
           <span>Events</span>
           <strong>Manage seminars and reading group entries</strong>

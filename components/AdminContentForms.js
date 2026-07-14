@@ -3,11 +3,13 @@ import {
   deleteEvent,
   deleteMember,
   deleteOpenPosition,
+  deletePublication,
   deleteProject,
   saveDissertation,
   saveEvent,
   saveMember,
   saveOpenPosition,
+  savePublication,
   saveProject,
 } from "../lib/admin-content-actions";
 
@@ -20,11 +22,29 @@ function Field({ label, name, defaultValue, type = "text", required = false }) {
   );
 }
 
+function FileField({ label, name, accept }) {
+  return (
+    <label>
+      <span>{label}</span>
+      <input name={name} type="file" accept={accept} />
+    </label>
+  );
+}
+
 function TextArea({ label, name, defaultValue }) {
   return (
     <label>
       <span>{label}</span>
       <textarea name={name} defaultValue={defaultValue ?? ""} rows={3} />
+    </label>
+  );
+}
+
+function Checkbox({ label, name, defaultChecked = false }) {
+  return (
+    <label className="checkbox-field">
+      <input name={name} type="checkbox" defaultChecked={defaultChecked} />
+      <span>{label}</span>
     </label>
   );
 }
@@ -45,12 +65,7 @@ function Select({ label, name, defaultValue, options }) {
 }
 
 function Visibility({ record }) {
-  return (
-    <label className="checkbox-field">
-      <input name="isVisible" type="checkbox" defaultChecked={record?.isVisible ?? true} />
-      <span>Visible on public site</span>
-    </label>
-  );
+  return <Checkbox label="Visible on public site" name="isVisible" defaultChecked={record?.isVisible ?? true} />;
 }
 
 function FormShell({ title, action, deleteAction, record, children }) {
@@ -102,6 +117,13 @@ export function MemberForm({ member }) {
       <Field label="Initials" name="initials" defaultValue={member?.initials} />
       <Field label="Sort order" name="sortOrder" defaultValue={member?.sortOrder ?? 0} type="number" />
       <Field label="Profile URL" name="profileUrl" defaultValue={member?.profileUrl} />
+      {member?.photoUrl ? (
+        <div className="admin-photo-preview">
+          <img src={member.photoUrl} alt="" />
+          <span>Current photo</span>
+        </div>
+      ) : null}
+      <FileField label="Upload photo" name="photoFile" accept="image/png,image/jpeg,image/webp,image/gif" />
       <Field label="Photo URL" name="photoUrl" defaultValue={member?.photoUrl} />
       <Field label="Email" name="email" defaultValue={member?.email} type="email" />
     </FormShell>
@@ -203,6 +225,64 @@ export function OpenPositionForm({ position }) {
       <Field label="Deadline" name="deadline" defaultValue={position?.deadline} />
       <Field label="Sort order" name="sortOrder" defaultValue={position?.sortOrder ?? 0} type="number" />
       <TextArea label="Description" name="description" defaultValue={position?.description} />
+    </FormShell>
+  );
+}
+
+function parseJson(value, fallback) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function listNames(value) {
+  const items = parseJson(value ?? "[]", []);
+  if (!Array.isArray(items)) return "";
+  return items.map((item) => (typeof item === "string" ? item : item.name)).filter(Boolean).join(", ");
+}
+
+export function PublicationForm({ publication }) {
+  return (
+    <FormShell
+      title={publication ? publication.title : "Add publication"}
+      action={savePublication}
+      deleteAction={deletePublication}
+      record={publication}
+    >
+      <Field label="Title" name="title" defaultValue={publication?.title} required />
+      <TextArea label="Authors" name="authors" defaultValue={listNames(publication?.authorsJson)} />
+      <Field label="Year" name="publicationYear" defaultValue={publication?.publicationYear} type="number" />
+      <Field label="Publication date" name="publicationDate" defaultValue={publication?.publicationDate} />
+      <Field label="Venue" name="venue" defaultValue={publication?.venue} />
+      <Field label="Type" name="type" defaultValue={publication?.type} />
+      <Field label="DOI" name="doi" defaultValue={publication?.doi} />
+      <Field label="OpenAlex ID" name="openalexId" defaultValue={publication?.openalexId} />
+      <Select
+        label="Review status"
+        name="reviewStatus"
+        defaultValue={publication?.reviewStatus ?? "manual"}
+        options={[
+          { value: "manual", label: "Manual" },
+          { value: "imported", label: "Imported" },
+          { value: "draft", label: "Draft" },
+          { value: "reviewed", label: "Reviewed" },
+          { value: "published", label: "Published" },
+        ]}
+      />
+      <Field label="Topic key" name="topic" defaultValue={publication?.topic ?? "responsible"} />
+      <Field label="Topic label" name="topicLabel" defaultValue={publication?.topicLabel ?? "Responsible AI"} />
+      <TextArea label="Keywords" name="keywords" defaultValue={listNames(publication?.keywordsJson)} />
+      <TextArea label="Abstract" name="abstract" defaultValue={publication?.abstract} />
+      <TextArea label="Public summary" name="publicSummary" defaultValue={publication?.publicSummary} />
+      <TextArea label="Industry angle" name="industryAngle" defaultValue={publication?.industryAngle} />
+      <TextArea label="Social snippet" name="socialSnippet" defaultValue={publication?.socialSnippet} />
+      <Field label="Citations" name="citedByCount" defaultValue={publication?.citedByCount ?? 0} type="number" />
+      <Field label="Landing page URL" name="landingPageUrl" defaultValue={publication?.landingPageUrl} />
+      <Field label="PDF URL" name="pdfUrl" defaultValue={publication?.pdfUrl} />
+      <Checkbox label="Open access" name="isOpenAccess" defaultChecked={publication?.isOpenAccess ?? false} />
+      <TextArea label="Raw source JSON" name="rawOpenAlexJson" defaultValue={publication?.rawOpenAlexJson ?? "{}"} />
     </FormShell>
   );
 }

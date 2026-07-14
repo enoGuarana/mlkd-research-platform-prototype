@@ -652,6 +652,50 @@ npm.cmd run db:seed
 npm.cmd run ingest:publications -- 10.48550/arXiv.2205.01833
 ```
 
+## Commit Messages
+
+Este repositório inclui um template simples em `.gitmessage` para manter commits curtos,
+profissionais e explicativos.
+
+Ative uma vez neste clone:
+
+```powershell
+git config commit.template .gitmessage
+```
+
+Para gerar e criar um commit automaticamente a partir dos arquivos staged:
+
+```powershell
+git add .
+npm.cmd run commit:auto
+```
+
+O comando analisa `git diff --cached --name-status`, escolhe tipo e escopo prováveis,
+monta uma mensagem em inglês e executa `git commit -F` com o texto gerado.
+
+Formato recomendado:
+
+```txt
+type(scope): short imperative summary
+
+Why:
+- reason for the change
+
+What changed:
+- main implementation points
+
+Validation:
+- commands or checks run
+```
+
+Exemplos:
+
+```txt
+feat(admin): add manual publication editing
+fix(auth): reject expired admin sessions
+docs: document target architecture
+```
+
 ## Arquivos Importantes
 
 - `prisma/schema.prisma`: schema atual.

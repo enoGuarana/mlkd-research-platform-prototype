@@ -109,7 +109,7 @@ export default function PublicationsPanel({ publications }) {
           ) : (
             filtered.map((publication) => (
               <button
-                key={publication.title}
+                key={publication.id ?? publication.title}
                 type="button"
                 className={`publication-card${publication.title === availableTitle ? " selected" : ""}`}
                 onClick={() => {

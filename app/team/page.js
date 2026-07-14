@@ -20,7 +20,11 @@ export default async function TeamPage() {
       <div className="people-grid">
         {currentMembers.map((person) => (
           <article className="person-card" key={person.name}>
-            <div className="avatar">{person.initials}</div>
+            {person.photoUrl ? (
+              <img className="avatar member-photo" src={person.photoUrl} alt={person.name} />
+            ) : (
+              <div className="avatar">{person.initials}</div>
+            )}
             <h3>{person.name}</h3>
             <p>{person.role}</p>
           </article>
