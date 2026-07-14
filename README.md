@@ -600,6 +600,7 @@ npm.cmd run db:migrate
 npm.cmd run db:seed
 npm.cmd run ingest:publications -- 10.48550/arXiv.2205.01833
 npm.cmd run commit:auto
+npm.cmd run context:summary
 ```
 
 ## Commit Messages
@@ -621,6 +622,23 @@ npm.cmd run commit:auto
 
 The helper inspects `git diff --cached --name-status`, chooses a likely type and scope, builds an
 English commit message, and runs `git commit -F`.
+
+## Context Handoff
+
+To generate a concise handoff summary for another Codex/GPT session:
+
+```powershell
+npm.cmd run context:summary
+```
+
+The command writes:
+
+```txt
+docs/context/handoff-summary.md
+```
+
+Paste that file into a new session when you want to continue with a different model while keeping
+the repository context clear.
 
 Recommended format:
 
