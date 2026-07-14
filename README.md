@@ -1,165 +1,435 @@
 # MLKD Research Platform Prototype
 
-Prototype of a modular research platform for the Machine Learning and Knowledge Discovery
-group at INESC-ID.
+Protótipo de uma plataforma modular de pesquisa para o grupo Machine Learning and Knowledge
+Discovery do INESC-ID.
 
-The project started as a static Next.js interface and now includes the first backend workflow:
-a DOI ingestion experience that imports publication metadata from OpenAlex into a local SQLite
-database through Prisma. The workflow is available both from an authenticated admin UI and from
-a CLI script.
+O projeto começou como uma interface pública em Next.js e já possui um primeiro backend funcional:
+autenticação administrativa simples, CRUD de conteúdo institucional, ingestão de publicações por DOI
+via OpenAlex, persistência com Prisma e uma página pública de publicações com busca e filtros.
 
-The public information architecture follows the original MLKD website:
+Este README documenta duas camadas:
+
+- **Estado atual:** o que já existe no protótipo.
+- **Arquitetura-alvo:** o molde técnico para evoluir o MVP para uma plataforma com PostgreSQL,
+  pgvector, filas, serviços bibliográficos, busca híbrida, RAG, RBAC e observabilidade.
+
+## Visão Do Produto
+
+A plataforma deve servir quatro tipos principais de usuário:
+
+- **Público:** consulta informações do grupo, equipe, projetos, eventos, vagas, dissertações e publicações.
+- **Pesquisador:** mantém perfil, publicações, projetos e conteúdos científicos associados.
+- **Editor:** revisa metadados, summaries, snippets, curadoria e visibilidade pública.
+- **Administrador:** gerencia usuários, permissões, ingestões, integrações, auditoria e operação.
+
+## Escopo Atual
+
+Implementado:
+
+- Site público com páginas de About, Team, Projects, Publications, Dissertations, Events e Open Positions.
+- Área administrativa protegida por login local.
+- CRUD administrativo para membros, projetos, eventos, dissertações e vagas.
+- Middleware protegendo `/admin`, `/admin/*` e `POST /api/publications/ingest`.
+- Cookie de sessão HTTP-only assinado.
+- Ingestão de DOI pela UI administrativa.
+- Ingestão de DOI pela CLI.
+- Cliente OpenAlex com normalização de metadados.
+- Prisma com SQLite para desenvolvimento local.
+- Tabelas de publicação, conteúdo institucional, execução de ingestão e erros de ingestão.
+- Página pública de publicações com busca, filtros e painel de detalhe.
+- Fallback para dados estáticos quando o banco está vazio ou indisponível.
+
+Ainda não implementado:
+
+- PostgreSQL em produção.
+- pgvector e embeddings persistidos.
+- Busca semântica real.
+- Chat RAG.
+- Worker assíncrono e fila.
+- RBAC multiusuário.
+- Integrações Crossref, ORCID e DBLP.
+- Sumarização por LLM.
+- Reindexação automática.
+- Observabilidade completa.
+- Testes automatizados.
+- Deploy e infraestrutura.
+
+## Arquitetura-Alvo
 
 ```txt
-About
-Team
-Projects
-Publications
-Dissertations
-Events
-Reading Group
-Open positions
+┌─────────────────────────────────────────────────────────────┐
+│                         USUÁRIOS                            │
+│ Público | Pesquisador | Editor | Administrador              │
+└─────────────────────────────┬───────────────────────────────┘
+                              │ HTTPS
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    APLICAÇÃO NEXT.JS                        │
+│                                                             │
+│  Frontend React                                             │
+│  ├── Site público                                           │
+│  ├── Portal de publicações                                  │
+│  ├── Busca semântica                                        │
+│  ├── Chat RAG                                               │
+│  └── Painel administrativo                                  │
+│                                                             │
+│  BFF / Application Layer                                    │
+│  ├── Route Handlers                                         │
+│  ├── Server Actions                                         │
+│  ├── Autenticação e RBAC                                    │
+│  ├── Validação                                              │
+│  └── Orquestração de casos de uso                           │
+└───────────────┬──────────────────────┬──────────────────────┘
+                │                      │
+                │ síncrono             │ cria jobs
+                ▼                      ▼
+┌──────────────────────────┐  ┌───────────────────────────────┐
+│ PostgreSQL + pgvector    │  │ FILA / PROCESSAMENTO ASSÍNCRONO│
+│ Prisma                   │  │                               │
+│                          │  │ Worker                        │
+│ Dados institucionais     │  │ ├── Ingestão bibliográfica    │
+│ Metadados científicos    │  │ ├── Geração de embeddings     │
+│ Usuários e permissões    │  │ ├── Sumarização por LLM       │
+│ Conteúdo gerado          │  │ ├── Manutenção automática     │
+│ Auditoria                │  │ └── Reindexação               │
+│ Vetores                  │  │                               │
+└───────────────┬──────────┘  └──────────────┬────────────────┘
+                │                            │
+                └──────────────┬─────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    CAMADA DE SERVIÇOS                       │
+│                                                             │
+│  BibliographicService                                       │
+│  ├── OpenAlex                                               │
+│  ├── Crossref                                               │
+│  ├── ORCID                                                  │
+│  └── DBLP                                                   │
+│                                                             │
+│  AIService                                                  │
+│  ├── LLM Provider                                           │
+│  ├── Embedding Provider                                     │
+│  ├── Prompt Templates                                       │
+│  └── Structured Output                                      │
+│                                                             │
+│  SearchService                                              │
+│  ├── Full-text search                                       │
+│  ├── Vector search                                          │
+│  ├── Hybrid ranking                                         │
+│  └── Reranking opcional                                     │
+└─────────────────────────────┬───────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    SEARCH + RAG                             │
+│                                                             │
+│ Pergunta → busca híbrida → seleção de contexto → LLM        │
+│          → resposta estruturada → fontes                    │
+└─────────────────────────────┬───────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                OBSERVABILIDADE E OPERAÇÃO                   │
+│ Logs | Métricas | Auditoria | Alertas | Backups | Custos IA │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-The authenticated admin area is an operational layer added on top of that public structure.
+## Princípios De Arquitetura
 
-## Current Scope
+- **Next.js como produto e BFF:** o App Router hospeda UI, server components, route handlers e server actions.
+- **Banco relacional como fonte de verdade:** PostgreSQL deve guardar conteúdo, metadados, usuários, permissões, auditoria e vetores.
+- **Serviços isolam integrações:** OpenAlex, Crossref, ORCID, DBLP, LLMs e embeddings devem ficar atrás de interfaces locais.
+- **Jobs para trabalho caro ou lento:** ingestão em lote, embeddings, summaries e reindexação não devem bloquear requests.
+- **Busca híbrida:** combinar full-text, vetores e ranking de domínio para melhorar descoberta científica.
+- **RAG com fontes:** respostas devem citar publicações, trechos, DOI, URLs ou registros internos usados como contexto.
+- **Auditoria por padrão:** ações administrativas, ingestões e geração de conteúdo devem ser rastreáveis.
+- **Evolução incremental:** o SQLite atual é aceitável para MVP; a migração para PostgreSQL deve preservar os fluxos existentes.
 
-The application is currently a functional prototype, not a complete production platform.
-
-Implemented:
-
-- Public homepage/About page with group mission and research focus.
-- Team page with current members and alumni.
-- Projects page with active and past projects.
-- Dissertations page with new, ongoing and finished dissertation entry points.
-- Events page with recent reading group and seminar-style entries.
-- External Reading Group navigation link.
-- Open positions page for MSc, PhD and collaboration entry points.
-- Admin page with DOI ingestion form, database overview and recent ingestion history.
-- Admin CRUD pages for team members, projects, events, dissertations and open positions.
-- Admin authentication with username/password from environment variables.
-- HTTP-only signed session cookie.
-- Middleware protection for `/admin` and the ingestion API route.
-- Searchable publications interface with search, topic filter, year filter and selected-paper panel.
-- SQLite database managed by Prisma.
-- DOI ingestion through the browser using an internal Next.js route handler.
-- DOI ingestion CLI using the same OpenAlex normalization logic.
-- Publication upsert into the database.
-- Ingestion audit tables for successful and failed runs.
-- Database-backed publications page with fallback to static sample data.
-
-Not implemented yet:
-
-- Role-based authorization.
-- Production database such as PostgreSQL.
-- Batch upload by CSV.
-- Editing imported publication metadata.
-- Manual review/approval workflow.
-- AI-generated summaries persisted in the database.
-- Role-based authorization.
-- Tests.
-- Deployment configuration.
-
-## Architecture
-
-Current browser ingestion flow:
+## Estrutura Do Projeto
 
 ```txt
-admin login
-  -> signed HTTP-only session cookie
-  -> protected /admin
-  -> DOI input
+app/
+  api/
+    auth/                       # login/logout atuais
+    publications/ingest/        # ingestão síncrona atual por DOI
+    search/                     # futuro endpoint de busca híbrida
+    rag/                        # futuro endpoint de chat/RAG
+  admin/                        # painel administrativo
+  publications/                 # portal público de publicações
+  team/ projects/ events/ ...   # site público
+
+components/
+  AdminContentForms.js          # forms CRUD administrativos
+  AdminIngestionPanel.js        # UI de ingestão DOI
+  PublicationsPanel.js          # busca/filtro client-side atual
+  site-data.js                  # dados fallback/demo
+
+lib/
+  auth.js                       # sessão local atual
+  prisma.js                     # Prisma Client compartilhado
+  content.js                    # loaders de conteúdo institucional
+  publications.js               # loader de publicações
+  actions/                      # futura camada de server actions por domínio
+  audit/                        # futura gravação de eventos auditáveis
+  jobs/                         # contratos de criação/execução de jobs
+  observability/                # logs, métricas e custos IA
+  rag/                          # seleção de contexto e resposta RAG
+  rbac/                         # papéis, permissões e guards
+  search/                       # full-text, vector, hybrid e reranking
+  services/
+    ai/                         # LLM, embeddings, prompts e structured output
+    bibliographic/              # OpenAlex, Crossref, ORCID e DBLP
+  validation/                   # schemas e validação de entrada
+
+prisma/
+  schema.prisma                 # schema atual
+  migrations/                   # migrações Prisma
+  seed.js                       # carga inicial
+
+scripts/
+  ingest-openalex.js            # CLI de ingestão atual
+  openalex-client.js            # cliente OpenAlex atual
+
+workers/
+  bibliographic-ingestion/      # futuro worker de ingestão bibliográfica
+  embeddings/                   # futuro worker de embeddings
+  summarization/                # futuro worker de summaries por LLM
+  reindexing/                   # futuro worker de reindexação
+
+docs/
+  architecture/                 # decisões e desenho técnico
+  operations/                   # runbooks, backups, alertas e custos
+```
+
+## Camadas
+
+### 1. Frontend React
+
+Responsável pela experiência do usuário:
+
+- Site público institucional.
+- Portal de publicações.
+- Busca por texto, tópicos, ano, autores e futuramente busca semântica.
+- Chat RAG com respostas estruturadas e fontes.
+- Painel administrativo para conteúdo, ingestão e operação.
+
+Estado atual:
+
+- As páginas públicas estão em `app/*/page.js`.
+- Publicações são renderizadas por `app/publications/page.js` e `components/PublicationsPanel.js`.
+- A administração fica em `app/admin/*`.
+
+### 2. BFF / Application Layer
+
+Responsável por requests, autenticação, autorização, validação e orquestração:
+
+- Route handlers em `app/api/**/route.js`.
+- Server actions para CRUD administrativo.
+- Guards de sessão e, futuramente, RBAC.
+- Validação de payloads.
+- Criação de jobs assíncronos.
+- Revalidação de páginas afetadas por mudanças.
+
+Estado atual:
+
+- `app/api/auth/login/route.js`
+- `app/api/auth/logout/route.js`
+- `app/api/publications/ingest/route.js`
+- `lib/admin-content-actions.js`
+- `middleware.js`
+
+### 3. Dados
+
+Estado atual:
+
+- Prisma com SQLite local (`DATABASE_URL="file:./dev.db"`).
+- Modelos: `Publication`, `Member`, `Project`, `Dissertation`, `Event`, `OpenPosition`,
+  `IngestionRun` e `IngestionError`.
+
+Arquitetura-alvo:
+
+- PostgreSQL como banco principal.
+- Extensão `pgvector` para embeddings.
+- Tabelas normalizadas para autores, instituições, tópicos, fontes, chunks e permissões.
+- Índices full-text para busca textual.
+- Índices vetoriais para similaridade semântica.
+- Tabelas de auditoria para ações humanas e automações.
+
+Entidades futuras recomendadas:
+
+- `User`, `Role`, `Permission`, `UserRole`
+- `ResearcherProfile`
+- `Author`, `Institution`, `PublicationAuthor`, `PublicationInstitution`
+- `PublicationSource`, `PublicationTopic`
+- `DocumentChunk`, `Embedding`
+- `GeneratedContent`
+- `Job`, `JobAttempt`
+- `AuditLog`
+- `AiUsageEvent`
+
+### 4. Fila E Workers
+
+Trabalho lento, caro, repetível ou sujeito a falha deve sair do request síncrono.
+
+Casos de uso:
+
+- Ingestão de centenas de DOIs.
+- Atualização automática de publicações por pesquisador.
+- Consulta a OpenAlex, Crossref, ORCID e DBLP.
+- Deduplicação e reconciliação de metadados.
+- Geração de embeddings.
+- Sumarização por LLM.
+- Reindexação de busca.
+- Reprocessamento em caso de mudança de prompt ou modelo.
+
+Estratégia sugerida:
+
+- Começar com tabela `Job` no PostgreSQL se o volume for baixo.
+- Migrar para BullMQ/Redis quando houver concorrência, retries e dashboards.
+- Cada job deve registrar status, tentativas, erro, payload e custo estimado quando envolver IA.
+
+### 5. BibliographicService
+
+Interface de domínio para buscar e normalizar metadados científicos.
+
+Responsabilidades:
+
+- Normalizar DOI, ORCID, OpenAlex ID e DBLP keys.
+- Buscar metadados externos.
+- Unificar dados divergentes entre fontes.
+- Aplicar deduplicação.
+- Preservar payload bruto para auditoria.
+- Produzir uma saída interna estável para persistência.
+
+Fontes planejadas:
+
+- **OpenAlex:** fonte principal para works, autores, instituições, tópicos e citações.
+- **Crossref:** validação de DOI, publisher, eventos de publicação e metadados editoriais.
+- **ORCID:** perfis de pesquisadores e associação autor-publicação.
+- **DBLP:** publicações de ciência da computação, conferências e autoria.
+
+Estado atual:
+
+- `scripts/openalex-client.js` já atua como cliente OpenAlex inicial.
+- A evolução natural é mover essa lógica para `lib/services/bibliographic/openalex`.
+
+### 6. AIService
+
+Camada de IA independente do provedor.
+
+Responsabilidades:
+
+- Gerar embeddings.
+- Chamar LLM para summaries, snippets e respostas RAG.
+- Centralizar templates de prompt.
+- Validar structured outputs.
+- Registrar custos e latência.
+- Permitir troca de provedor/modelo sem alterar telas ou route handlers.
+
+Saídas previstas:
+
+- Summary público acessível.
+- Summary técnico para pesquisadores.
+- Industry angle.
+- Social snippet.
+- Keywords enriquecidas.
+- Classificação de tópicos.
+- Resposta RAG com fontes.
+
+### 7. SearchService
+
+Camada de descoberta e ranking.
+
+Modos planejados:
+
+- **Full-text:** título, abstract, autores, venue, tópicos e summaries.
+- **Vector:** similaridade semântica usando embeddings.
+- **Hybrid:** combinação de full-text, vetor, filtros e boosts.
+- **Reranking opcional:** reranker aplicado aos top-k resultados quando a qualidade justificar o custo.
+
+Filtros importantes:
+
+- Ano.
+- Tipo de publicação.
+- Autor.
+- Instituição.
+- Projeto.
+- Tópico.
+- Open access.
+- Status de revisão.
+
+### 8. Search + RAG
+
+Pipeline desejado:
+
+```txt
+Pergunta do usuário
+  -> validação e normalização
+  -> busca híbrida
+  -> seleção de contexto
+  -> montagem de prompt
+  -> chamada LLM
+  -> resposta estruturada
+  -> fontes e trechos usados
+  -> auditoria/custos
+```
+
+Regras de produto:
+
+- Toda resposta deve indicar fontes.
+- O sistema deve recusar respostas quando não houver contexto suficiente.
+- O contexto deve favorecer publicações visíveis e revisadas.
+- Conteúdo não revisado pode ser usado apenas em áreas administrativas ou com aviso explícito.
+
+### 9. Observabilidade E Operação
+
+Itens necessários para produção:
+
+- Logs estruturados por request, job e integração externa.
+- Métricas de latência, erro, throughput e fila.
+- Auditoria de ações administrativas.
+- Alertas para falha de ingestão, fila parada, erro de LLM e custo anormal.
+- Backups PostgreSQL.
+- Monitoramento de custos IA por rota, job, usuário e modelo.
+- Runbooks operacionais em `docs/operations`.
+
+## Fluxos Atuais
+
+### Ingestão pelo Admin
+
+```txt
+Admin
+  -> /admin
   -> components/AdminIngestionPanel.js
-  -> app/api/publications/ingest/route.js
-  -> OpenAlex API
+  -> POST /api/publications/ingest
   -> scripts/openalex-client.js
   -> Prisma
   -> SQLite
-  -> lib/publications.js
-  -> app/publications/page.js
-  -> components/PublicationsPanel.js
+  -> IngestionRun/IngestionError
+  -> revalidatePath("/publications")
 ```
 
-CLI ingestion uses the same normalization path:
+### Ingestão pela CLI
 
 ```txt
-DOI input
+npm run ingest:publications -- DOI
   -> scripts/ingest-openalex.js
   -> scripts/openalex-client.js
   -> Prisma
   -> SQLite
 ```
 
-In simpler terms:
-
-1. You paste one or more DOIs in `/admin`.
-2. The admin panel posts the DOIs to an internal API route.
-3. The route asks OpenAlex for metadata about each DOI.
-3. The metadata is normalized into the local publication shape.
-4. The publication is inserted or updated in SQLite.
-5. The ingestion run is recorded with success and error counts.
-6. The publications and admin pages are revalidated.
-7. The publications page reads from the database.
-8. If the database has no records or cannot be read, the page falls back to static demo data.
-
-## Tech Stack
-
-- Next.js 14 App Router
-- React 18
-- Prisma 6
-- SQLite for local development
-- OpenAlex API for publication metadata
-
-## Project Structure
+### Conteúdo Institucional
 
 ```txt
-app/
-  layout.js
-  page.js
-  api/publications/ingest/route.js
-  team/page.js
-  projects/page.js
-  publications/page.js
-  dissertations/page.js
-  events/page.js
-  open-positions/page.js
-  people/page.js              # redirects to /team
-  opportunities/page.js       # redirects to /open-positions
-  admin/page.js
-  admin/login/page.js
-  admin/members/page.js
-  admin/projects/page.js
-  admin/events/page.js
-  admin/dissertations/page.js
-  admin/open-positions/page.js
-  globals.css
-
-components/
-  AdminIngestionPanel.js
-  site-data.js
-  PublicationsPanel.js
-
-lib/
-  prisma.js
-  publications.js
-
-prisma/
-  schema.prisma
-  migrations/
-
-scripts/
-  ingest-openalex.js
-  openalex-client.js
-
-public/
-  logo512.png
-  home2-500w.png
+Admin CRUD
+  -> Server Actions
+  -> Prisma
+  -> SQLite
+  -> páginas públicas dinâmicas
 ```
 
-## Environment
+## Variáveis De Ambiente
 
-Create a `.env` file from `.env.example`:
+Crie `.env` a partir de `.env.example`:
 
 ```env
 DATABASE_URL="file:./dev.db"
@@ -169,100 +439,98 @@ ADMIN_USERNAME="admin"
 ADMIN_PASSWORD="replace-this-password"
 ```
 
-`OPENALEX_API_KEY` is optional for small experiments, but should be configured for regular use.
-`AUTH_SECRET` signs the admin session cookie. Use a long random value outside local development.
-Never use the example admin password in a deployed environment.
+Notas:
 
-## Install
+- `OPENALEX_API_KEY` é opcional para testes pequenos, mas recomendado para uso frequente.
+- `AUTH_SECRET` deve ser longo e aleatório fora do desenvolvimento local.
+- Nunca use a senha de exemplo em ambiente compartilhado ou público.
 
-On Windows PowerShell, prefer `npm.cmd` if script execution policy blocks `npm`.
+Variáveis futuras recomendadas:
+
+```env
+POSTGRES_URL="postgresql://..."
+REDIS_URL="redis://..."
+LLM_PROVIDER="openai"
+LLM_MODEL="..."
+EMBEDDING_MODEL="..."
+RAG_MAX_CONTEXT_ITEMS="8"
+AI_DAILY_BUDGET_USD="..."
+```
+
+## Instalação
+
+No Windows PowerShell, prefira `npm.cmd` se a policy de execução bloquear `npm`.
 
 ```powershell
 npm.cmd install
 ```
 
-## Database
+## Banco De Dados
 
-Generate the Prisma Client:
+Gerar Prisma Client:
 
 ```powershell
 npm.cmd run db:generate
 ```
 
-Create or update the SQLite database:
+Criar ou atualizar o banco local:
 
 ```powershell
 npm.cmd run db:migrate -- --name init
 ```
 
-The local database is created at:
-
-```txt
-prisma/dev.db
-```
-
-This file is ignored by git.
-
-Load the initial MLKD content seed:
+Carregar seed inicial:
 
 ```powershell
 npm.cmd run db:seed
 ```
 
-The seed inserts the current and past members from the reference MLKD Team page, plus starter
-records for projects, dissertations, events and open positions.
+O SQLite local fica em:
 
-## Ingest Publications From The Admin UI
+```txt
+prisma/dev.db
+```
 
-Start the app:
+Esse arquivo deve permanecer fora do Git.
+
+## Rodar Localmente
 
 ```powershell
 npm.cmd run dev
 ```
 
-Open:
+Abra:
+
+```txt
+http://localhost:3000
+```
+
+Área administrativa:
 
 ```txt
 http://localhost:3000/admin
 ```
 
-If you are not signed in, the middleware redirects you to:
+## Ingestão De Publicações
 
-```txt
-http://localhost:3000/admin/login
-```
+### Admin UI
 
-For local development, the checked-in `.env.example` shows the variables you need. The local
-`.env` used during prototype development can use:
+O painel aceita:
 
-```env
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="admin"
-```
+- Um DOI por linha.
+- Vários DOIs separados por vírgula ou ponto e vírgula.
+- Exemplo pré-preenchido.
+- Resultado por DOI.
+- Histórico recente de ingestões.
+- Detalhes de erro por execução.
 
-Change those values before sharing or deploying the app.
-
-The admin page lets you:
-
-- Paste one DOI per line.
-- Paste multiple DOIs separated by commas or semicolons.
-- Load an example DOI.
-- Submit the batch to the internal API route.
-- See immediate per-DOI results.
-- See publication count and recent ingestion runs.
-- Expand recent runs to inspect error details.
-- Open dedicated maintenance pages for members, projects, events, dissertations and positions.
-
-The browser flow calls:
+Endpoint:
 
 ```txt
 POST /api/publications/ingest
 ```
 
-This route is protected by the same session middleware as `/admin`. Unauthenticated requests
-receive HTTP `401`.
-
-Request body:
+Payload:
 
 ```json
 {
@@ -270,10 +538,11 @@ Request body:
 }
 ```
 
-Successful response:
+Resposta de sucesso:
 
 ```json
 {
+  "runId": "...",
   "total": 1,
   "succeeded": 1,
   "failed": 0,
@@ -281,239 +550,125 @@ Successful response:
 }
 ```
 
-The route returns HTTP `207` when the batch partially succeeds and partially fails.
+Quando há sucesso parcial, a rota retorna HTTP `207`.
 
-## Ingest Publications From The CLI
-
-Pass one or more DOIs after `--`:
+### CLI
 
 ```powershell
 npm.cmd run ingest:publications -- 10.48550/arXiv.2205.01833
 ```
 
-Example with multiple DOIs:
+Múltiplos DOIs:
 
 ```powershell
 npm.cmd run ingest:publications -- 10.48550/arXiv.2205.01833 10.1145/example
 ```
 
-For each DOI, the script:
+## Modelo De Autenticação Atual
 
-- Normalizes the DOI.
-- Fetches the OpenAlex work.
-- Extracts title, authors, institutions, topics, keywords, venue, year, URLs and citation count.
-- Reconstructs the abstract when OpenAlex provides `abstract_inverted_index`.
-- Maps OpenAlex metadata into the local topic filters.
-- Performs an upsert into `Publication`.
-- Records failures in `IngestionError`.
-- Tracks the batch in `IngestionRun`.
+A autenticação atual é simples e adequada apenas para protótipo local:
 
-## Run Locally
+- Credenciais vindas de `ADMIN_USERNAME` e `ADMIN_PASSWORD`.
+- Cookie `mlkd_admin_session`.
+- Assinatura HMAC SHA-256 com `AUTH_SECRET`.
+- Expiração em 8 horas.
+- Cookie HTTP-only e SameSite=Lax.
+
+Evolução recomendada:
+
+- Tabela `User`.
+- Hash de senha.
+- RBAC.
+- Rate limiting.
+- Recuperação/rotação de credenciais.
+- Auditoria de login, logout e falhas.
+
+## Roadmap Técnico
+
+### Fase 1: Consolidar MVP
+
+- Adicionar testes para auth, CRUD, ingestão e normalização OpenAlex.
+- Extrair OpenAlex de `scripts/` para `lib/services/bibliographic/openalex`.
+- Adicionar validação explícita de inputs.
+- Adicionar rate limiting em login e ingestão.
+- Criar edição/revisão de publicação importada.
+
+### Fase 2: PostgreSQL E Modelo Científico
+
+- Migrar de SQLite para PostgreSQL.
+- Normalizar autores, instituições, tópicos e fontes.
+- Adicionar usuários, papéis e permissões.
+- Adicionar auditoria.
+- Preparar extensão pgvector.
+
+### Fase 3: Jobs E IA
+
+- Criar tabela/fila de jobs.
+- Implementar worker de ingestão bibliográfica.
+- Implementar embeddings.
+- Persistir summaries e snippets gerados por LLM.
+- Registrar custo, modelo, prompt version e latência.
+
+### Fase 4: Busca E RAG
+
+- Implementar full-text search.
+- Implementar vector search.
+- Implementar ranking híbrido.
+- Criar endpoint `/api/search`.
+- Criar endpoint `/api/rag`.
+- Criar UI de chat RAG com fontes.
+
+### Fase 5: Operação
+
+- Logs estruturados.
+- Métricas.
+- Alertas.
+- Backups.
+- Deploy.
+- Runbooks.
+
+## Convenções De Implementação
+
+- Route handlers ficam em `app/api/**/route.js`.
+- Server actions por domínio devem migrar para `lib/actions`.
+- Integrações externas devem ficar em `lib/services`.
+- Regras de busca ficam em `lib/search`.
+- Regras de RAG ficam em `lib/rag`.
+- Criação e execução de jobs ficam em `lib/jobs` e `workers`.
+- Validação de entrada fica em `lib/validation`.
+- RBAC fica em `lib/rbac`.
+- Logs, métricas e custos ficam em `lib/observability`.
+- Decisões arquiteturais longas ficam em `docs/architecture`.
+- Procedimentos operacionais ficam em `docs/operations`.
+
+## Comandos
 
 ```powershell
 npm.cmd run dev
-```
-
-Open:
-
-```txt
-http://localhost:3000
-```
-
-## Production Build
-
-```powershell
 npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:migrate
+npm.cmd run db:seed
+npm.cmd run ingest:publications -- 10.48550/arXiv.2205.01833
 ```
 
-## Data Model
+## Arquivos Importantes
 
-The current Prisma schema has three models.
+- `prisma/schema.prisma`: schema atual.
+- `lib/prisma.js`: Prisma Client compartilhado.
+- `lib/auth.js`: sessão local.
+- `middleware.js`: proteção de rotas administrativas.
+- `lib/content.js`: loaders de conteúdo institucional.
+- `lib/publications.js`: loader de publicações.
+- `lib/admin-content-actions.js`: server actions CRUD.
+- `app/api/publications/ingest/route.js`: ingestão DOI via UI.
+- `scripts/openalex-client.js`: cliente e normalizador OpenAlex atual.
+- `scripts/ingest-openalex.js`: CLI de ingestão.
+- `components/PublicationsPanel.js`: interface pública de publicações.
+- `components/AdminIngestionPanel.js`: interface administrativa de ingestão.
 
-`Publication` stores imported publication metadata:
+## Status
 
-- DOI and OpenAlex ID.
-- Title.
-- Authors, topics, institutions and keywords as serialized JSON strings.
-- Year, date, venue and type.
-- Abstract.
-- Local topic and topic label.
-- Citation count.
-- Open-access status.
-- Landing page and PDF URL.
-- Raw OpenAlex JSON for auditing.
-- Creation, update and ingestion timestamps.
-
-`IngestionRun` stores one import execution:
-
-- Total DOI count.
-- Successful count.
-- Failed count.
-- Start and completion timestamps.
-
-`IngestionError` stores failed DOI imports:
-
-- DOI.
-- Error message.
-- Related ingestion run.
-
-## Authentication Model
-
-Authentication is intentionally small and local to this prototype.
-
-The login form posts credentials to:
-
-```txt
-POST /api/auth/login
-```
-
-The route compares the submitted credentials with:
-
-```env
-ADMIN_USERNAME
-ADMIN_PASSWORD
-```
-
-On success, the route creates a signed session token and stores it in an HTTP-only cookie named:
-
-```txt
-mlkd_admin_session
-```
-
-The cookie is:
-
-- HTTP-only, so client-side JavaScript cannot read it.
-- SameSite=Lax, reducing cross-site request risk for normal navigation.
-- Signed with HMAC SHA-256 using `AUTH_SECRET`.
-- Time-limited to 8 hours.
-
-The `middleware.js` file protects:
-
-- `/admin`
-- `/admin/*`
-- `/api/publications/ingest`
-
-The logout button posts to:
-
-```txt
-POST /api/auth/logout
-```
-
-That route expires the session cookie.
-
-## Content Management
-
-The public site now reads managed content from Prisma for:
-
-- Team members and alumni.
-- Projects.
-- Events.
-- Dissertations.
-- Open positions.
-
-The admin maintenance routes are:
-
-```txt
-/admin/members
-/admin/projects
-/admin/events
-/admin/dissertations
-/admin/open-positions
-```
-
-Each maintenance page supports:
-
-- Adding a new record.
-- Editing existing records.
-- Changing visibility on the public site.
-- Deleting records.
-- Setting sort order.
-
-The Team seed is based on the reference MLKD Team page:
-
-```txt
-https://mlkd.idss.inesc-id.pt/mlkd-team.html
-```
-
-The public pages are dynamic so changes saved in the admin are reflected from the database.
-
-## Implemented Files
-
-- `prisma/schema.prisma`: database schema.
-- `prisma/migrations/`: applied database migrations.
-- `lib/prisma.js`: shared Prisma Client instance.
-- `lib/auth.js`: session token creation, verification and cookie helpers.
-- `middleware.js`: protects admin pages and the ingestion API.
-- `lib/publications.js`: server-side publication loader with static fallback.
-- `app/admin/login/page.js`: admin login page.
-- `app/api/auth/login/route.js`: credential check and session creation.
-- `app/api/auth/logout/route.js`: session expiration.
-- `app/api/publications/ingest/route.js`: API route used by the admin UI.
-- `scripts/openalex-client.js`: OpenAlex API client and metadata normalization.
-- `scripts/ingest-openalex.js`: DOI ingestion CLI.
-- `app/page.js`: public About/home page aligned with the original MLKD entry point.
-- `app/team/page.js`: current members and alumni.
-- `app/projects/page.js`: active and past projects.
-- `app/dissertations/page.js`: dissertation entry points.
-- `app/events/page.js`: event and reading group history preview.
-- `app/open-positions/page.js`: open position entry points.
-- `app/people/page.js`: compatibility redirect to `/team`.
-- `app/opportunities/page.js`: compatibility redirect to `/open-positions`.
-- `app/admin/page.js`: server page that loads publication count and recent ingestion runs.
-- `app/admin/members/page.js`: member and alumni maintenance.
-- `app/admin/projects/page.js`: project maintenance.
-- `app/admin/events/page.js`: event maintenance.
-- `app/admin/dissertations/page.js`: dissertation maintenance.
-- `app/admin/open-positions/page.js`: open position maintenance.
-- `app/publications/page.js`: server page that loads publications from the database.
-- `components/AdminIngestionPanel.js`: client UI for DOI submission and ingestion feedback.
-- `components/LoginForm.js`: login form.
-- `components/LogoutButton.js`: logout action for the admin page.
-- `components/AdminContentForms.js`: reusable admin forms for managed content.
-- `components/PublicationsPanel.js`: client UI for searching, filtering and selecting publications.
-- `lib/content.js`: public content loaders with database-first behavior and static fallback.
-- `lib/admin-content-actions.js`: server actions for content CRUD.
-- `prisma/seed.js`: initial database seed for MLKD content.
-- `.env.example`: required environment variables.
-
-## Current Limitations
-
-This is intentionally still a narrow MVP.
-
-The admin ingestion experience is protected by a simple username/password login. This is enough
-for a local prototype, but production should use stronger account management, password storage,
-rate limiting and role-based authorization.
-
-Imported authors, topics and institutions are stored as JSON strings instead of normalized
-relational tables. This keeps the prototype simple, but it is not the final shape for
-analytics-heavy workflows.
-
-The AI summary panel is still a UI placeholder. It displays imported abstracts or fallback copy,
-but there is no LLM summarization pipeline yet.
-
-## Recommended Next Implementation Steps
-
-1. Add rate limiting to login and ingestion routes.
-2. Add CSV upload for bulk DOI ingestion.
-3. Add publication review/editing screens for local summaries, industry angle and social snippet.
-4. Add role-based authorization for multiple admin users.
-5. Normalize publication authors, institutions and topics into separate tables.
-6. Add tests for content CRUD, DOI normalization, abstract reconstruction, auth, API route behavior and OpenAlex mapping.
-7. Move from SQLite to PostgreSQL for production.
-8. Add deployment configuration.
-9. Add retry/backoff for larger OpenAlex batches.
-10. Add AI-generated summaries persisted in the database.
-
-## What To Study
-
-To understand and extend this project, study these topics in order:
-
-1. Next.js App Router: pages, layouts, Server Components and Client Components.
-2. React state: how `PublicationsPanel` manages search, filters and selected publication.
-3. Prisma basics: schema, migrations, Prisma Client, `findMany` and `upsert`.
-4. SQLite basics: local database files, tables, unique constraints and migrations.
-5. OpenAlex works API: DOI lookup, authorships, topics, locations and abstract format.
-6. ETL pipelines: extract from API, transform metadata, load into a database.
-7. Data modeling: when to store JSON and when to normalize into relational tables.
-8. Admin workflows: validation, review, authorization and audit logs.
-9. Web authentication basics: cookies, HMAC signatures, middleware and route protection.
+Este repositório está preparado como MVP funcional e esqueleto arquitetural. As pastas de serviços,
+jobs, busca, RAG, RBAC e observabilidade existem para orientar a próxima implementação sem misturar
+responsabilidades no App Router ou nos componentes React.
