@@ -116,6 +116,7 @@ model OpenPosition {
 model IngestionRun {
   id          String           @id @default(cuid())
   source      String           @default("openalex")
+  inputType   String           @default("doi")
   total       Int              @default(0)
   succeeded   Int              @default(0)
   failed      Int              @default(0)
@@ -125,10 +126,13 @@ model IngestionRun {
 }
 
 model IngestionError {
-  id        String       @id @default(cuid())
-  runId     String
-  doi       String
-  message   String
-  createdAt DateTime     @default(now())
-  run       IngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  runId          String
+  identifier     String
+  identifierType String       @default("doi")
+  code           String?
+  message        String
+  retryable      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  run            IngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 }

@@ -1,6 +1,6 @@
 # Codex Handoff Summary
 
-Generated at: `2026-07-14T15:18:10.795Z`
+Generated at: `2026-07-15T10:09:29.202Z`
 Repository: `C:\Users\Enomoto\Downloads\mlkd-research-platform-prototype`
 Branch: `main`
 
@@ -14,7 +14,7 @@ Paste this summary into a new Codex/GPT session before asking it to continue wor
 - Prisma with local SQLite for the current MVP.
 - Admin area protected by signed HTTP-only session cookies.
 - Admin CRUD for members, projects, publications, events, dissertations, and open positions.
-- DOI ingestion through OpenAlex from both UI and CLI.
+- Publication ingestion through OpenAlex by DOI, title, OpenAlex ID, or URL from the UI, plus DOI ingestion from the CLI.
 - Manual publication editing supports records without DOI or OpenAlex ID.
 - Member photo uploads are stored under `public/uploads/members`.
 - Target architecture includes PostgreSQL, pgvector, async workers, AI services, hybrid search, RAG, RBAC, and observability.
@@ -46,16 +46,13 @@ Dependencies:
 
 ```txt
 ## main...origin/main
- M README.md
- M package.json
-?? docs/context/
-?? scripts/context-summary.js
 ```
 
 ## Latest Commits
 
 ```txt
-72421e6 (HEAD -> main, origin/main, origin/HEAD) docs: rewrite README in English
+31dc031 (HEAD -> main, origin/main, origin/HEAD) chore(docs): update docs workflow
+72421e6 docs: rewrite README in English
 ab9af02 feat(admin): add manual content management
 770ac6c docs: define target platform architecture
 cdadbad feat: add publication ingestion and CMS
@@ -73,16 +70,13 @@ No staged changes.
 ## Unstaged Diff Summary
 
 ```txt
-README.md    | 18 ++++++++++++++++++
- package.json |  3 ++-
- 2 files changed, 20 insertions(+), 1 deletion(-)
+No unstaged changes.
 ```
 
 ## Untracked Files
 
 ```txt
-docs/context/handoff-summary.md
-scripts/context-summary.js
+No untracked files.
 ```
 
 ## Important Files
@@ -100,7 +94,7 @@ scripts/context-summary.js
 - `lib/publications.js`
 - `middleware.js`
 - `prisma/schema.prisma`
-- `scripts/openalex-client.js`
+- `lib/services/bibliographic/openalex.js`
 - `scripts/ingest-openalex.js`
 - `scripts/commit-auto.js`
 - `scripts/context-summary.js`

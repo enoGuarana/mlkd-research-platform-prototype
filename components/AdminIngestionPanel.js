@@ -3,10 +3,40 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { MAX_IDENTIFIER_BATCH } from "../lib/validation/publication-identifier";
 
-const exampleDoi = "10.48550/arXiv.2205.01833";
+const importMethods = {
+  doi: {
+    label: "DOI",
+    fieldLabel: "DOIs",
+    example: "10.48550/arXiv.2205.01833",
+    placeholder: "10.48550/arXiv.2205.01833\n10.1145/example",
+    help: `Paste up to ${MAX_IDENTIFIER_BATCH} DOI values, one per line.`,
+  },
+  title: {
+    label: "Title",
+    fieldLabel: "Publication title",
+    example: "OpenAlex: A fully-open index of scholarly works, authors, venues, institutions, and concepts",
+    placeholder: "Enter the complete publication title",
+    help: "Search OpenAlex and choose the correct publication before importing.",
+  },
+  openalex: {
+    label: "OpenAlex ID",
+    fieldLabel: "OpenAlex IDs",
+    example: "W2741809807",
+    placeholder: "W2741809807",
+    help: `Paste up to ${MAX_IDENTIFIER_BATCH} OpenAlex Work IDs, one per line.`,
+  },
+  url: {
+    label: "URL",
+    fieldLabel: "Publication URL",
+    example: "https://openalex.org/W2741809807",
+    placeholder: "https://publisher.example/article",
+    help: "DOI and OpenAlex URLs import directly; other URLs show matching OpenAlex records.",
+  },
+};
 
-function countDois(value) {
+function countIdentifiers(value) {
   return String(value ?? "")
     .split(/[\n,;]+/)
     .map((item) => item.trim())
@@ -15,35 +45,56 @@ function countDois(value) {
 
 export default function AdminIngestionPanel({ recentRuns, publicationCount }) {
   const router = useRouter();
-  const [dois, setDois] = useState("");
+  const [identifierType, setIdentifierType] = useState("doi");
+  const [identifiers, setIdentifiers] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [candidates, setCandidates] = useState([]);
   const [error, setError] = useState("");
-  const doiCount = useMemo(() => countDois(dois), [dois]);
+  const method = importMethods[identifierType];
+  const supportsBatch = identifierType === "doi" || identifierType === "openalex";
+  const identifierCount = useMemo(
+    () => (supportsBatch ? countIdentifiers(identifiers) : identifiers.trim() ? 1 : 0),
+    [identifiers, supportsBatch]
+  );
+  const exceedsBatchLimit = identifierCount > MAX_IDENTIFIER_BATCH;
+
+  async function sendRequest(payload) {
+    const response = await fetch("/api/publications/ingest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const responsePayload = await response.json();
+
+    if (!response.ok && response.status !== 207) {
+      throw new Error(responsePayload.message ?? "Unable to import publications.");
+    }
+
+    return responsePayload;
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
     setIsSubmitting(true);
     setError("");
     setResult(null);
+    setCandidates([]);
 
     try {
-      const response = await fetch("/api/publications/ingest", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ dois }),
+      const payload = await sendRequest({
+        identifierType,
+        identifiers,
       });
 
-      const payload = await response.json();
-      if (!response.ok && response.status !== 207) {
-        throw new Error(payload.message ?? "Unable to ingest publications.");
+      if (payload.requiresSelection) {
+        setCandidates(payload.candidates);
+        return;
       }
 
       setResult(payload);
       if (payload.succeeded > 0) {
-        setDois("");
+        setIdentifiers("");
       }
       router.refresh();
     } catch (submissionError) {
@@ -53,40 +104,130 @@ export default function AdminIngestionPanel({ recentRuns, publicationCount }) {
     }
   }
 
+  async function importCandidate(openalexId) {
+    setIsSubmitting(true);
+    setError("");
+    setResult(null);
+
+    try {
+      const payload = await sendRequest({
+        identifierType: "openalex",
+        identifiers: openalexId,
+        sourceIdentifierType: identifierType,
+      });
+      setResult(payload);
+      setCandidates([]);
+      setIdentifiers("");
+      router.refresh();
+    } catch (submissionError) {
+      setError(submissionError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function changeMethod(nextType) {
+    setIdentifierType(nextType);
+    setIdentifiers("");
+    setResult(null);
+    setCandidates([]);
+    setError("");
+  }
+
   return (
     <div className="admin-layout">
-      <section className="admin-panel" aria-labelledby="doi-ingestion-title">
+      <section className="admin-panel" aria-labelledby="publication-ingestion-title">
         <div className="panel-heading">
           <p className="eyebrow">Publication ingestion</p>
-          <h3 id="doi-ingestion-title">Import articles by DOI</h3>
-          <p>
-            Paste one DOI per line, or separate multiple DOIs with commas or semicolons.
-          </p>
+          <h3 id="publication-ingestion-title">Import publication</h3>
+          <p>Choose how the publication should be found in OpenAlex.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="ingestion-form">
+          <fieldset className="ingestion-methods">
+            <legend>Find publication by</legend>
+            <div className="ingestion-method-options">
+              {Object.entries(importMethods).map(([value, option]) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name="identifierType"
+                    value={value}
+                    checked={identifierType === value}
+                    onChange={() => changeMethod(value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <label>
-            <span>DOIs</span>
+            <span>{method.fieldLabel}</span>
             <textarea
-              value={dois}
-              onChange={(event) => setDois(event.target.value)}
-              placeholder={`${exampleDoi}\n10.1145/example`}
-              rows={7}
+              value={identifiers}
+              onChange={(event) => setIdentifiers(event.target.value)}
+              placeholder={method.placeholder}
+              rows={supportsBatch ? 7 : 4}
             />
+            <small>{method.help}</small>
           </label>
 
           <div className="admin-actions">
-            <button className="button primary" type="submit" disabled={isSubmitting || doiCount === 0}>
-              {isSubmitting ? "Importing..." : "Import DOIs"}
+            <button
+              className="button primary"
+              type="submit"
+              disabled={isSubmitting || identifierCount === 0 || exceedsBatchLimit}
+            >
+              {isSubmitting ? "Working..." : identifierType === "title" || identifierType === "url" ? "Find publication" : "Import"}
             </button>
-            <button className="button secondary" type="button" onClick={() => setDois(exampleDoi)}>
+            <button className="button secondary" type="button" onClick={() => setIdentifiers(method.example)}>
               Use example
             </button>
-            <span className="input-count">{doiCount} queued</span>
+            {supportsBatch ? (
+              <span className="input-count">
+                {identifierCount}/{MAX_IDENTIFIER_BATCH} queued
+              </span>
+            ) : null}
           </div>
         </form>
 
+        {exceedsBatchLimit ? (
+          <p className="status-message error">
+            Reduce this batch to {MAX_IDENTIFIER_BATCH} identifiers before importing.
+          </p>
+        ) : null}
+
         {error ? <p className="status-message error">{error}</p> : null}
+
+        {candidates.length ? (
+          <div className="result-panel" aria-live="polite">
+            <h4>Choose the correct publication</h4>
+            <div className="result-list">
+              {candidates.map((candidate) => (
+                <article className="result-item" key={candidate.openalexId}>
+                  <span className="status-pill success">match</span>
+                  <div>
+                    <strong>{candidate.title}</strong>
+                    <p>
+                      {[candidate.authors.join(", "), candidate.publicationYear, candidate.venue]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </p>
+                    <button
+                      className="button secondary"
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => importCandidate(candidate.openalexId)}
+                    >
+                      Import this publication
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {result ? (
           <div className={`result-panel${result.failed > 0 ? " partial" : ""}`} aria-live="polite">
@@ -95,10 +236,10 @@ export default function AdminIngestionPanel({ recentRuns, publicationCount }) {
             </h4>
             <div className="result-list">
               {result.results.map((item) => (
-                <article className="result-item" key={item.doi}>
+                <article className="result-item" key={item.identifier}>
                   <span className={`status-pill ${item.status}`}>{item.status}</span>
                   <div>
-                    <strong>{item.publication?.title ?? item.doi}</strong>
+                    <strong>{item.publication?.title ?? item.identifier}</strong>
                     <p>{item.message ?? [item.publication?.publicationYear, item.publication?.venue].filter(Boolean).join(" / ")}</p>
                   </div>
                 </article>
@@ -129,7 +270,7 @@ export default function AdminIngestionPanel({ recentRuns, publicationCount }) {
                 <div>
                   <strong>{new Date(run.createdAt).toLocaleString()}</strong>
                   <p>
-                    {run.succeeded}/{run.total} imported
+                    {run.succeeded}/{run.total} imported by {importMethods[run.inputType]?.label ?? run.inputType}
                     {run.failed ? ` / ${run.failed} failed` : ""}
                   </p>
                 </div>
@@ -138,7 +279,8 @@ export default function AdminIngestionPanel({ recentRuns, publicationCount }) {
                     <summary>Error details</summary>
                     {run.errors.map((runError) => (
                       <p key={runError.id}>
-                        <strong>{runError.doi}</strong>: {runError.message}
+                        <strong>{runError.identifier}</strong>
+                        {runError.code ? ` [${runError.code}]` : ""}: {runError.message}
                       </p>
                     ))}
                   </details>

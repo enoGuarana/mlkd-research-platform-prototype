@@ -33,8 +33,10 @@ Implemented:
 - Admin CRUD for members, projects, events, dissertations, open positions, and publications.
 - Manual publication creation and editing.
 - Member photo upload from the admin UI.
-- DOI ingestion from the admin UI.
+- Publication ingestion from the admin UI by DOI, title, OpenAlex ID, or URL.
 - DOI ingestion from the CLI.
+- DOI validation, bounded batches, OpenAlex retry/timeout handling, and structured ingestion errors.
+- Editorial review gate for newly imported publications.
 - OpenAlex client and metadata normalization.
 - SQLite database managed by Prisma.
 - Ingestion run and ingestion error tracking.
@@ -180,7 +182,8 @@ lib/
   search/                       # future full-text, vector, hybrid, and reranking logic
   services/
     ai/                         # future LLM, embedding, prompts, structured output
-    bibliographic/              # future OpenAlex, Crossref, ORCID, DBLP services
+    bibliographic/
+      openalex.js               # current OpenAlex client and normalizer
   validation/                   # future input validation
 
 prisma/
@@ -190,7 +193,6 @@ prisma/
 
 scripts/
   ingest-openalex.js            # current ingestion CLI
-  openalex-client.js            # current OpenAlex client
   commit-auto.js                # automatic commit message helper
 
 workers/
@@ -234,14 +236,14 @@ The target model should later add:
 
 ## Current Workflows
 
-### Admin DOI Ingestion
+### Admin Publication Ingestion
 
 ```txt
 Admin
   -> /admin
   -> components/AdminIngestionPanel.js
   -> POST /api/publications/ingest
-  -> scripts/openalex-client.js
+  -> lib/services/bibliographic/openalex.js
   -> Prisma
   -> SQLite
   -> IngestionRun / IngestionError
@@ -253,7 +255,7 @@ Admin
 ```txt
 npm run ingest:publications -- DOI
   -> scripts/ingest-openalex.js
-  -> scripts/openalex-client.js
+  -> lib/services/bibliographic/openalex.js
   -> Prisma
   -> SQLite
 ```
@@ -291,7 +293,7 @@ ADMIN_PASSWORD="replace-this-password"
 
 Notes:
 
-- `OPENALEX_API_KEY` is optional for small experiments, but recommended for regular use.
+- `OPENALEX_API_KEY` is required by the current OpenAlex API, including title and URL searches.
 - `AUTH_SECRET` signs the admin session cookie. Use a long random value outside local development.
 - Never use the example admin password in a shared or deployed environment.
 
@@ -367,10 +369,12 @@ http://localhost:3000/admin
 
 The admin panel supports:
 
-- one DOI per line
-- multiple DOIs separated by commas or semicolons
-- example DOI loading
-- per-DOI results
+- DOI batches with up to 10 identifiers
+- OpenAlex Work ID batches with up to 10 identifiers
+- title search with explicit result selection
+- DOI URLs, OpenAlex URLs, and publisher landing-page URLs
+- examples for every import method
+- per-identifier results
 - recent ingestion history
 - error details per run
 
@@ -384,9 +388,14 @@ Payload:
 
 ```json
 {
-  "dois": "10.48550/arXiv.2205.01833"
+  "identifierType": "doi",
+  "identifiers": "10.48550/arXiv.2205.01833"
 }
 ```
+
+Supported `identifierType` values are `doi`, `title`, `openalex`, and `url`. Title and publisher
+URL searches return candidates that must be selected and imported by their OpenAlex Work ID.
+The legacy `{ "dois": "..." }` payload remains supported.
 
 Successful response:
 
@@ -453,8 +462,8 @@ Planned sources:
 - **ORCID:** researcher profiles and author-publication association
 - **DBLP:** computer science publications, venues, and authorship
 
-The current OpenAlex implementation lives in `scripts/openalex-client.js`. A natural next step is
-moving it to `lib/services/bibliographic/openalex`.
+The current OpenAlex implementation lives in `lib/services/bibliographic/openalex.js` and is shared
+by the admin ingestion route and the CLI.
 
 ### AIService
 
@@ -537,8 +546,8 @@ Production needs:
 ### Phase 1: Strengthen The MVP
 
 - Add tests for auth, CRUD, ingestion, and OpenAlex normalization.
-- Move OpenAlex logic from `scripts/` to `lib/services/bibliographic/openalex`.
-- Add explicit input validation.
+- Add a stable bibliographic ingestion service that can reconcile multiple metadata sources.
+- Extend explicit input validation to the remaining admin workflows.
 - Add rate limiting to login and ingestion.
 - Improve imported publication review/editing workflows.
 
@@ -594,6 +603,7 @@ Production needs:
 
 ```powershell
 npm.cmd run dev
+npm.cmd test
 npm.cmd run build
 npm.cmd run db:generate
 npm.cmd run db:migrate
@@ -673,7 +683,7 @@ docs: document target architecture
 - `lib/publications.js`: publication loader.
 - `lib/admin-content-actions.js`: current admin CRUD server actions.
 - `app/api/publications/ingest/route.js`: DOI ingestion endpoint.
-- `scripts/openalex-client.js`: current OpenAlex client and normalizer.
+- `lib/services/bibliographic/openalex.js`: current OpenAlex client and normalizer.
 - `scripts/ingest-openalex.js`: DOI ingestion CLI.
 - `scripts/commit-auto.js`: automatic commit message helper.
 - `components/PublicationsPanel.js`: public publication UI.

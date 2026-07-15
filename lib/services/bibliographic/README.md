@@ -1,13 +1,17 @@
 # Bibliographic Service
 
-Camada planejada para buscar, normalizar e reconciliar metadados científicos.
+This layer owns external bibliographic integrations and their metadata normalization.
 
-Fontes previstas:
+Implemented sources:
 
-- OpenAlex
+- OpenAlex (`openalex.js`)
+
+Planned sources:
+
 - Crossref
 - ORCID
 - DBLP
 
-O cliente OpenAlex atual está em `scripts/openalex-client.js`. A próxima evolução é mover essa lógica
-para cá e expor uma API interna estável, por exemplo `ingestPublicationByDoi`.
+The OpenAlex module exposes work retrieval by DOI or OpenAlex ID, candidate searches by title or
+landing-page URL, and conversion to the current `Publication` persistence shape. Route handlers
+and CLI scripts consume this module instead of owning integration logic.

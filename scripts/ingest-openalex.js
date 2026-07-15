@@ -1,20 +1,34 @@
 #!/usr/bin/env node
 
 const { PrismaClient } = require("@prisma/client");
-const { fetchOpenAlexWorkByDoi, normalizeDoi, normalizeOpenAlexWork } = require("./openalex-client");
+const {
+  fetchOpenAlexWorkByDoi,
+  normalizeOpenAlexWork,
+} = require("../lib/services/bibliographic/openalex");
+const { DoiInputError, parseDoiBatch } = require("../lib/validation/doi");
+const { buildPublicationUpsertData } = require("../lib/publication-ingestion");
 
 async function main() {
   const prisma = new PrismaClient();
-  const dois = process.argv.slice(2).map(normalizeDoi).filter(Boolean);
+  let uniqueDois;
 
-  if (!dois.length) {
-    console.error("Uso: npm run ingest:publications -- 10.1000/exemplo 10.2000/outro");
+  try {
+    uniqueDois = parseDoiBatch(process.argv.slice(2));
+  } catch (error) {
+    if (!(error instanceof DoiInputError)) {
+      throw error;
+    }
+
+    console.error(`${error.code}: ${error.message}`);
+    if (error.details.invalidDois.length) {
+      console.error(`Invalid values: ${error.details.invalidDois.join(", ")}`);
+    }
+    console.error("Usage: npm run ingest:publications -- 10.1000/example 10.2000/another");
     await prisma.$disconnect();
     process.exitCode = 1;
     return;
   }
 
-  const uniqueDois = Array.from(new Set(dois));
   const run = await prisma.ingestionRun.create({
     data: {
       total: uniqueDois.length,
@@ -27,26 +41,31 @@ async function main() {
   for (const doi of uniqueDois) {
     try {
       const work = await fetchOpenAlexWorkByDoi(doi);
-      const normalized = normalizeOpenAlexWork(work);
+      const normalized = normalizeOpenAlexWork(work, doi);
 
       await prisma.publication.upsert({
-        where: { doi: normalized.doi },
-        update: normalized,
-        create: normalized,
+        ...buildPublicationUpsertData(normalized),
       });
 
       succeeded += 1;
       console.log(`OK ${doi}`);
     } catch (error) {
+      const code = error.code ?? "INGESTION_ERROR";
+      const message = error.message ?? "Unable to ingest publication.";
+      const retryable = Boolean(error.retryable);
+
       failed += 1;
       await prisma.ingestionError.create({
         data: {
           runId: run.id,
-          doi,
-          message: error.message,
+          identifier: doi,
+          identifierType: "doi",
+          code,
+          message,
+          retryable,
         },
       });
-      console.error(`ERRO ${doi}: ${error.message}`);
+      console.error(`ERROR ${doi} [${code}]: ${message}`);
     }
   }
 
